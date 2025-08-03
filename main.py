@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #importing all libraries
 import librosa
 
@@ -29,3 +30,5 @@ def detect_pitch(audio_file, sample_rate=22050):
     time, frequency, confidence, activation = crepe.predict(y, sr, viterbi=True)
     return time, frequency, confidence, y, sr
 print(detect_pitch(audio.export('output.mp3',format='mp3')))
+=======
+>>>>>>> parent of c984649 (pitch detection complete, now proceeding towards autotune)
