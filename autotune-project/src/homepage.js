@@ -1,9 +1,107 @@
 import React, { useState, useRef, useEffect } from 'react';
-import './App.css';
-import Silk from './Silk';
-import ShinyText from './ShinyText';
 
 const API_BASE_URL = 'http://127.0.0.1:5000';
+
+// Enhanced Slider Component with proper 50% centering
+const AutotuneSlider = ({ value, onChange }) => {
+  const sliderRef = useRef(null);
+  
+  const handleSliderChange = (e) => {
+    onChange(parseFloat(e.target.value));
+  };
+  
+  // Calculate thumb position (50% should be at center)
+  const thumbPosition = ((value - 0.1) / (1.0 - 0.1)) * 100;
+  
+  return (
+    <div className="slider-container">
+      <div className="slider-track">
+        <div 
+          className="slider-progress" 
+          style={{ width: `${thumbPosition}%` }}
+        />
+        <input
+          ref={sliderRef}
+          type="range"
+          min="0.1"
+          max="1.0"
+          step="0.1"
+          value={value}
+          onChange={handleSliderChange}
+          className="slider-input"
+        />
+        <div 
+          className="slider-thumb" 
+          style={{ left: `${thumbPosition}%` }}
+        />
+      </div>
+      <style jsx>{`
+        .slider-container {
+          position: relative;
+          width: 100%;
+          height: 40px;
+          display: flex;
+          align-items: center;
+        }
+        
+        .slider-track {
+          position: relative;
+          width: 100%;
+          height: 8px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        
+        .slider-progress {
+          position: absolute;
+          top: 0;
+          left: 0;
+          height: 100%;
+          background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+          border-radius: 4px;
+          transition: width 0.2s ease;
+        }
+        
+        .slider-input {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          opacity: 0;
+          cursor: pointer;
+          z-index: 2;
+        }
+        
+        .slider-thumb {
+          position: absolute;
+          top: 50%;
+          width: 20px;
+          height: 20px;
+          background: white;
+          border: 3px solid #3b82f6;
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          transition: left 0.2s ease, transform 0.2s ease;
+          pointer-events: none;
+          z-index: 1;
+        }
+        
+        .slider-input:hover + .slider-thumb {
+          transform: translate(-50%, -50%) scale(1.1);
+          border-color: #8b5cf6;
+        }
+        
+        .slider-input:active + .slider-thumb {
+          transform: translate(-50%, -50%) scale(1.2);
+          border-color: #ec4899;
+        }
+      `}</style>
+    </div>
+  );
+};
 
 function Homepage() {
   const [isUploading, setIsUploading] = useState(false);
@@ -13,7 +111,7 @@ function Homepage() {
   const [dragActive, setDragActive] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
-  const [autotuneStrength, setAutotuneStrength] = useState(0.8); // New state for strength
+  const [autotuneStrength, setAutotuneStrength] = useState(0.5); // Start at 50%
 
   const fileInputRef = useRef(null);
 
@@ -38,9 +136,9 @@ function Homepage() {
             clearInterval(interval);
             return 90;
           }
-          return prev + 5;
+          return prev + 3;
         });
-      }, 200);
+      }, 300);
     } else {
       setProgress(0);
     }
@@ -91,7 +189,7 @@ function Homepage() {
     
     const formData = new FormData();
     formData.append('file', uploadedFile);
-    formData.append('strength', autotuneStrength.toString()); // Add strength parameter
+    formData.append('strength', autotuneStrength.toString());
     
     try {
       const response = await fetch(`${API_BASE_URL}/upload`, {
@@ -162,24 +260,38 @@ function Homepage() {
   };
 
   return (
-    <div className="homepage">
-      <div className="silk-background">
-        <Silk
-          speed={5}
-          scale={1}
-          color="#374151"
-          noiseIntensity={1.5}
-          rotation={0}
-        />
-      </div>
-      <div className="homepage-container">
-        <ShinyText 
-          text="AutoTune Pro" 
-          disabled={false} 
-          speed={3} 
-          className="homepage-title"
-        />
-        <p className="homepage-subtitle">Transform your audio with AI-powered pitch correction</p>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: '2rem',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
+      <div style={{
+        maxWidth: '800px',
+        width: '100%',
+        textAlign: 'center'
+      }}>
+        <h1 style={{
+          fontSize: '3rem',
+          fontWeight: 'bold',
+          background: 'linear-gradient(45deg, #3b82f6, #8b5cf6, #ec4899)',
+          backgroundClip: 'text',
+          WebkitBackgroundClip: 'text',
+          color: 'transparent',
+          marginBottom: '0.5rem'
+        }}>
+          AutoTune Pro
+        </h1>
+        <p style={{
+          fontSize: '1.2rem',
+          color: '#94a3b8',
+          marginBottom: '2rem'
+        }}>
+          Transform your audio with AI-powered pitch correction
+        </p>
         
         {error && (
           <div style={{
@@ -195,9 +307,21 @@ function Homepage() {
           </div>
         )}
         
-        <div className="upload-section">
+        <div style={{ marginBottom: '2rem' }}>
           <div 
-            className={`upload-area ${dragActive ? 'drag-active' : ''} ${uploadedFile ? 'has-file' : ''}`}
+            style={{
+              background: dragActive ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(40px)',
+              border: dragActive ? '2px dashed #3b82f6' : uploadedFile ? '2px solid #10b981' : '2px dashed rgba(255, 255, 255, 0.2)',
+              borderRadius: '20px',
+              padding: '2rem',
+              cursor: !uploadedFile ? 'pointer' : 'default',
+              transition: 'all 0.3s ease',
+              minHeight: '200px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
@@ -213,40 +337,54 @@ function Homepage() {
             />
             
             {!uploadedFile && (
-              <div className="upload-content">
-                <div className="upload-icon">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7,10 12,15 17,10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                </div>
-                <h3>Upload Audio File</h3>
-                <p>Drag and drop your audio file here, or click to browse</p>
-                <span className="file-types">Supports: MP3, WAV</span>
+              <div style={{ textAlign: 'center', color: '#cbd5e1' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎵</div>
+                <h3 style={{ color: 'white', marginBottom: '0.5rem' }}>Upload Audio File</h3>
+                <p style={{ marginBottom: '1rem' }}>Drag and drop your audio file here, or click to browse</p>
+                <span style={{ 
+                  padding: '0.5rem 1rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '20px',
+                  fontSize: '0.9rem'
+                }}>
+                  Supports: MP3, WAV
+                </span>
               </div>
             )}
             
             {uploadedFile && (
-              <div className="file-info">
-                <div className="file-icon">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                    <polyline points="10,9 9,9 8,9"/>
-                  </svg>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                width: '100%',
+                background: 'rgba(255, 255, 255, 0.1)',
+                padding: '1rem',
+                borderRadius: '15px'
+              }}>
+                <div style={{ fontSize: '2rem' }}>🎵</div>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <h4 style={{ color: 'white', margin: 0 }}>{uploadedFile.name}</h4>
+                  <p style={{ color: '#94a3b8', margin: '0.25rem 0 0 0' }}>
+                    {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
                 </div>
-                <div className="file-details">
-                  <h4>{uploadedFile.name}</h4>
-                  <p>{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                </div>
-                <button className="remove-button" onClick={removeFile} title="Remove file">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
+                <button 
+                  onClick={removeFile}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '8px',
+                    color: '#ef4444',
+                    padding: '0.5rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Remove file"
+                >
+                  ✕
                 </button>
               </div>
             )}
@@ -254,67 +392,102 @@ function Homepage() {
           
           {uploadedFile && !processedFile && (
             <>
-              {/* Autotune Strength Control */}
               <div style={{
                 background: 'rgba(255, 255, 255, 0.05)',
                 backdropFilter: 'blur(40px)',
                 borderRadius: '15px',
                 padding: '1.5rem',
-                margin: '1rem 0',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                maxWidth: '400px',
-                marginLeft: 'auto',
-                marginRight: 'auto'
+                margin: '1.5rem 0',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
               }}>
-                <h3 style={{ color: '#ffffff', margin: '0 0 1rem 0', fontSize: '1.1rem' }}>
+                <h3 style={{ 
+                  color: '#ffffff', 
+                  margin: '0 0 1rem 0', 
+                  fontSize: '1.1rem',
+                  textAlign: 'center'
+                }}>
                   Autotune Strength: {Math.round(autotuneStrength * 100)}%
                 </h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '0.9rem', minWidth: '40px' }}>Light</span>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="1.0"
-                    step="0.1"
+                
+                <div style={{ margin: '1rem 0' }}>
+                  <AutotuneSlider 
                     value={autotuneStrength}
-                    onChange={(e) => setAutotuneStrength(parseFloat(e.target.value))}
-                    style={{
-                      flex: 1,
-                      height: '6px',
-                      borderRadius: '3px',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
+                    onChange={setAutotuneStrength}
                   />
-                  <span style={{ color: '#94a3b8', fontSize: '0.9rem', minWidth: '50px' }}>Heavy</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8' }}>
-                  <span>Subtle correction</span>
-                  <span>Full correction</span>
+                
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  fontSize: '0.85rem', 
+                  color: '#94a3b8',
+                  marginTop: '0.5rem'
+                }}>
+                  <span>10% - Subtle</span>
+                  <span>50% - Balanced</span>
+                  <span>100% - Heavy</span>
                 </div>
               </div>
 
               <button 
-                className="process-button"
                 onClick={processAudio}
                 disabled={isProcessing}
+                style={{
+                  background: isProcessing ? '#6b7280' : 'linear-gradient(45deg, #3b82f6, #8b5cf6)',
+                  border: 'none',
+                  borderRadius: '15px',
+                  color: 'white',
+                  padding: '1rem 2rem',
+                  fontSize: '1.1rem',
+                  fontWeight: '600',
+                  cursor: isProcessing ? 'not-allowed' : 'pointer',
+                  transform: isProcessing ? 'none' : 'translateY(0)',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isProcessing) {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isProcessing) {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.3)';
+                  }
+                }}
               >
-                {isProcessing ? 'Processing...' : 'AutoTune Audio'}
+                {isProcessing ? '🎵 Processing Audio...' : '🎤 Apply AutoTune'}
               </button>
               
               {isProcessing && (
-                <div className="progress-card">
-                  <div className="progress-bar">
-                    <div
-                      className="progress-fill"
-                      style={{
-                        width: `${progress}%`
-                      }}
-                    ></div>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(40px)',
+                  borderRadius: '15px',
+                  padding: '1.5rem',
+                  margin: '1rem 0',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <div style={{
+                    width: '100%',
+                    height: '8px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                    marginBottom: '1rem'
+                  }}>
+                    <div style={{
+                      width: `${progress}%`,
+                      height: '100%',
+                      background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+                      borderRadius: '4px',
+                      transition: 'width 0.3s ease'
+                    }} />
                   </div>
-                  <p style={{ color: '#cbd5e1', margin: '0.5rem 0 0 0' }}>
-                    Processing Audio... {progress}%
+                  <p style={{ color: '#cbd5e1', margin: 0, textAlign: 'center' }}>
+                    Processing with AI pitch correction... {progress}%
                   </p>
                 </div>
               )}
@@ -322,58 +495,190 @@ function Homepage() {
           )}
           
           {processedFile && (
-            <div className="result-section">
-              <div className="result-card">
-                <div className="result-header">
-                  <h3>✅ Processing Complete</h3>
-                  <p>Your audio has been autotuned successfully!</p>
-                </div>
-                <div className="result-details">
-                  <div className="detail-item">
-                    <span className="detail-label">Original:</span>
-                    <span className="detail-value">{processedFile.originalName}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">Processed:</span>
-                    <span className="detail-value">{processedFile.name}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">Autotune Strength:</span>
-                    <span className="detail-value">{Math.round((processedFile.strengthUsed || 0.8) * 100)}%</span>
-                  </div>
-                </div>
-                <button className="download-button" onClick={downloadProcessedFile}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7,10 12,15 17,10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                  Download Processed File
-                </button>
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '15px',
+              padding: '1.5rem',
+              margin: '1rem 0',
+              textAlign: 'center'
+            }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <h3 style={{ color: '#10b981', margin: '0 0 0.5rem 0' }}>
+                  ✅ AutoTune Complete!
+                </h3>
+                <p style={{ color: '#cbd5e1', margin: 0 }}>
+                  Your audio has been processed with {Math.round((processedFile.strengthUsed || 0.5) * 100)}% autotune strength
+                </p>
               </div>
+              
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '10px',
+                padding: '1rem',
+                margin: '1rem 0',
+                textAlign: 'left'
+              }}>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <span style={{ color: '#94a3b8' }}>Original: </span>
+                  <span style={{ color: 'white' }}>{processedFile.originalName}</span>
+                </div>
+                <div>
+                  <span style={{ color: '#94a3b8' }}>Processed: </span>
+                  <span style={{ color: 'white' }}>{processedFile.name}</span>
+                </div>
+              </div>
+              
+              <button 
+                onClick={downloadProcessedFile}
+                style={{
+                  background: 'linear-gradient(45deg, #10b981, #059669)',
+                  border: 'none',
+                  borderRadius: '10px',
+                  color: 'white',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  margin: '0 auto',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              >
+                <span>⬇️</span>
+                Download Processed File
+              </button>
             </div>
           )}
         </div>
         
-        <div className="features-section">
-          <h2>How It Works</h2>
-          <div className="features-grid">
-            <div className="feature-item">
-              <div className="feature-number">1</div>
-              <h3>Upload</h3>
-              <p>Upload your audio file in MP3 or WAV format</p>
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(40px)',
+          borderRadius: '20px',
+          padding: '2rem',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          marginTop: '2rem'
+        }}>
+          <h2 style={{
+            color: 'white',
+            marginBottom: '2rem',
+            fontSize: '1.8rem'
+          }}>
+            How It Works
+          </h2>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '1.5rem'
+          }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '15px',
+              padding: '1.5rem',
+              textAlign: 'center',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                background: 'linear-gradient(45deg, #3b82f6, #8b5cf6)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem auto',
+                color: 'white',
+                fontSize: '1.5rem',
+                fontWeight: 'bold'
+              }}>
+                1
+              </div>
+              <h3 style={{ color: 'white', marginBottom: '0.5rem' }}>Upload Audio</h3>
+              <p style={{ color: '#94a3b8', margin: 0 }}>
+                Upload your audio file in MP3 or WAV format
+              </p>
             </div>
-            <div className="feature-item">
-              <div className="feature-number">2</div>
-              <h3>Process</h3>
-              <p>Our AI analyzes and corrects pitch automatically</p>
+            
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '15px',
+              padding: '1.5rem',
+              textAlign: 'center',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                background: 'linear-gradient(45deg, #8b5cf6, #ec4899)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem auto',
+                color: 'white',
+                fontSize: '1.5rem',
+                fontWeight: 'bold'
+              }}>
+                2
+              </div>
+              <h3 style={{ color: 'white', marginBottom: '0.5rem' }}>AI Processing</h3>
+              <p style={{ color: '#94a3b8', margin: 0 }}>
+                Our AI analyzes pitch and applies intelligent correction
+              </p>
             </div>
-            <div className="feature-item">
-              <div className="feature-number">3</div>
-              <h3>Download</h3>
-              <p>Get your perfectly tuned audio file instantly</p>
+            
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '15px',
+              padding: '1.5rem',
+              textAlign: 'center',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                background: 'linear-gradient(45deg, #ec4899, #10b981)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem auto',
+                color: 'white',
+                fontSize: '1.5rem',
+                fontWeight: 'bold'
+              }}>
+                3
+              </div>
+              <h3 style={{ color: 'white', marginBottom: '0.5rem' }}>Download</h3>
+              <p style={{ color: '#94a3b8', margin: 0 }}>
+                Get your perfectly tuned audio file instantly
+              </p>
             </div>
           </div>
+        </div>
+        
+        <div style={{
+          marginTop: '2rem',
+          padding: '1rem',
+          background: 'rgba(59, 130, 246, 0.1)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          borderRadius: '10px',
+          textAlign: 'center'
+        }}>
+          <p style={{ color: '#3b82f6', margin: 0, fontSize: '0.9rem' }}>
+            💡 <strong>Pro Tip:</strong> Start with 50% strength for balanced results. Use lower values for subtle correction, higher for dramatic effect.
+          </p>
         </div>
       </div>
     </div>
