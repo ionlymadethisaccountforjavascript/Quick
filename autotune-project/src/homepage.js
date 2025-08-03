@@ -3,7 +3,7 @@ import './App.css';
 import Silk from './Silk';
 import ShinyText from './ShinyText';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 function Homepage() {
   const [isUploading, setIsUploading] = useState(false);
@@ -13,6 +13,7 @@ function Homepage() {
   const [dragActive, setDragActive] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
+  const [autotuneStrength, setAutotuneStrength] = useState(0.8); // New state for strength
 
   const fileInputRef = useRef(null);
 
@@ -90,6 +91,7 @@ function Homepage() {
     
     const formData = new FormData();
     formData.append('file', uploadedFile);
+    formData.append('strength', autotuneStrength.toString()); // Add strength parameter
     
     try {
       const response = await fetch(`${API_BASE_URL}/upload`, {
@@ -108,7 +110,8 @@ function Homepage() {
       setProcessedFile({
         name: result.processed_name,
         fileId: result.file_id,
-        originalName: result.original_name
+        originalName: result.original_name,
+        strengthUsed: result.strength_used
       });
       
     } catch (error) {
@@ -251,6 +254,47 @@ function Homepage() {
           
           {uploadedFile && !processedFile && (
             <>
+              {/* Autotune Strength Control */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(40px)',
+                borderRadius: '15px',
+                padding: '1.5rem',
+                margin: '1rem 0',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                maxWidth: '400px',
+                marginLeft: 'auto',
+                marginRight: 'auto'
+              }}>
+                <h3 style={{ color: '#ffffff', margin: '0 0 1rem 0', fontSize: '1.1rem' }}>
+                  Autotune Strength: {Math.round(autotuneStrength * 100)}%
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '0.9rem', minWidth: '40px' }}>Light</span>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1.0"
+                    step="0.1"
+                    value={autotuneStrength}
+                    onChange={(e) => setAutotuneStrength(parseFloat(e.target.value))}
+                    style={{
+                      flex: 1,
+                      height: '6px',
+                      borderRadius: '3px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <span style={{ color: '#94a3b8', fontSize: '0.9rem', minWidth: '50px' }}>Heavy</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8' }}>
+                  <span>Subtle correction</span>
+                  <span>Full correction</span>
+                </div>
+              </div>
+
               <button 
                 className="process-button"
                 onClick={processAudio}
@@ -294,8 +338,8 @@ function Homepage() {
                     <span className="detail-value">{processedFile.name}</span>
                   </div>
                   <div className="detail-item">
-                    <span className="detail-label">Pitch Correction:</span>
-                    <span className="detail-value">Applied</span>
+                    <span className="detail-label">Autotune Strength:</span>
+                    <span className="detail-value">{Math.round((processedFile.strengthUsed || 0.8) * 100)}%</span>
                   </div>
                 </div>
                 <button className="download-button" onClick={downloadProcessedFile}>
