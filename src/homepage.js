@@ -3,6 +3,8 @@ import './App.css';
 import Silk from './Silk';
 import ShinyText from './ShinyText';
 
+const API_BASE_URL = 'http://localhost:5000';
+
 function Homepage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -10,6 +12,7 @@ function Homepage() {
   const [processedFile, setProcessedFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState(null);
 
   const fileInputRef = useRef(null);
 
@@ -19,24 +22,24 @@ function Homepage() {
       setProgress(0);
       interval = setInterval(() => {
         setProgress((prev) => {
-          if (prev >= 100) {
+          if (prev >= 90) {
             clearInterval(interval);
-            return 100;
+            return 90;
           }
-          return prev + 4;
+          return prev + 10;
         });
-      }, 60);
+      }, 100);
     } else if (isProcessing) {
       setProgress(0);
       interval = setInterval(() => {
         setProgress((prev) => {
-          if (prev >= 100) {
+          if (prev >= 90) {
             clearInterval(interval);
-            return 100;
+            return 90;
           }
-          return prev + 2;
+          return prev + 5;
         });
-      }, 60);
+      }, 200);
     } else {
       setProgress(0);
     }
@@ -66,14 +69,10 @@ function Homepage() {
   const handleFile = (file) => {
     if (file.type === 'audio/mp3' || file.type === 'audio/wav' || 
         file.name.toLowerCase().endsWith('.mp3') || file.name.toLowerCase().endsWith('.wav')) {
-      setIsUploading(true);
-      // Simulate upload delay
-      setTimeout(() => {
-        setUploadedFile(file);
-        setIsUploading(false);
-      }, 1500);
+      setUploadedFile(file);
+      setError(null);
     } else {
-      alert('Please upload an MP3 or WAV file only');
+      setError('Please upload an MP3 or WAV file only');
     }
   };
 
@@ -83,26 +82,66 @@ function Homepage() {
     }
   };
 
-  const processAudio = () => {
+  const processAudio = async () => {
     if (!uploadedFile) return;
     
     setIsProcessing(true);
-    // Simulate processing delay
-    setTimeout(() => {
-      setProcessedFile({
-        name: uploadedFile.name.replace(/\.[^/.]+$/, '') + '_autotuned.mp3',
-        url: URL.createObjectURL(uploadedFile) // In real app, this would be the processed file
+    setError(null);
+    
+    const formData = new FormData();
+    formData.append('file', uploadedFile);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
+        method: 'POST',
+        body: formData,
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to process file');
+      }
+      
+      const result = await response.json();
+      setProgress(100);
+      
+      setProcessedFile({
+        name: result.processed_name,
+        fileId: result.file_id,
+        originalName: result.original_name
+      });
+      
+    } catch (error) {
+      console.error('Error processing audio:', error);
+      setError(error.message || 'Failed to process audio. Please try again.');
+    } finally {
       setIsProcessing(false);
-    }, 3000);
+    }
   };
 
-  const downloadProcessedFile = () => {
-    if (processedFile) {
+  const downloadProcessedFile = async () => {
+    if (!processedFile) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/download/${processedFile.fileId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to download file');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = processedFile.url;
+      link.href = url;
       link.download = processedFile.name;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      setError('Failed to download file. Please try again.');
     }
   };
 
@@ -113,7 +152,7 @@ function Homepage() {
     setProcessedFile(null);
     setIsUploading(false);
     setIsProcessing(false);
-    // Reset the file input so future uploads work
+    setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -138,6 +177,20 @@ function Homepage() {
           className="homepage-title"
         />
         <p className="homepage-subtitle">Transform your audio with AI-powered pitch correction</p>
+        
+        {error && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '10px',
+            padding: '1rem',
+            margin: '1rem 0',
+            color: '#ef4444',
+            textAlign: 'center'
+          }}>
+            {error}
+          </div>
+        )}
         
         <div className="upload-section">
           <div 
@@ -194,20 +247,6 @@ function Homepage() {
                 </button>
               </div>
             )}
-            
-            {isUploading && (
-              <div style={{ width: '100%', marginTop: '2rem', marginBottom: '1rem' }}>
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{
-                      width: `${progress}%`
-                    }}
-                  ></div>
-                </div>
-                <p style={{ color: '#cbd5e1', margin: 0 }}>Uploading... {progress}%</p>
-              </div>
-            )}
           </div>
           
           {uploadedFile && !processedFile && (
@@ -217,11 +256,11 @@ function Homepage() {
                 onClick={processAudio}
                 disabled={isProcessing}
               >
-                AutoTune Audio
+                {isProcessing ? 'Processing...' : 'AutoTune Audio'}
               </button>
               
               {isProcessing && (
-                <div style={{ width: '100%', marginTop: '2rem', marginBottom: '1rem' }}>
+                <div className="progress-card">
                   <div className="progress-bar">
                     <div
                       className="progress-fill"
@@ -230,7 +269,9 @@ function Homepage() {
                       }}
                     ></div>
                   </div>
-                  <p style={{ color: '#cbd5e1', margin: 0 }}>Processing Audio... {progress}%</p>
+                  <p style={{ color: '#cbd5e1', margin: '0.5rem 0 0 0' }}>
+                    Processing Audio... {progress}%
+                  </p>
                 </div>
               )}
             </>
@@ -246,7 +287,7 @@ function Homepage() {
                 <div className="result-details">
                   <div className="detail-item">
                     <span className="detail-label">Original:</span>
-                    <span className="detail-value">{uploadedFile.name}</span>
+                    <span className="detail-value">{processedFile.originalName}</span>
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Processed:</span>
@@ -276,7 +317,7 @@ function Homepage() {
             <div className="feature-item">
               <div className="feature-number">1</div>
               <h3>Upload</h3>
-              <p>Upload your audio file in any common format</p>
+              <p>Upload your audio file in MP3 or WAV format</p>
             </div>
             <div className="feature-item">
               <div className="feature-number">2</div>
